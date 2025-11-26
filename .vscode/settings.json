@@ -59,6 +59,12 @@
   "files.associations": {
     "iostream": "cpp",
     "iosfwd": "cpp",
-    "ostream": "cpp"
+    "ostream": "cpp",
+    "new": "cpp",
+    "bitset": "cpp",
+    "string_view": "cpp",
+    "regex": "cpp",
+    "iomanip": "cpp",
+    "string": "cpp"
   },
 }

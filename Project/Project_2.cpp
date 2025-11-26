@@ -15,23 +15,26 @@
 
 using namespace std;
 
+// --- Các hằng số cấu hình hệ thống ---
 const string FILE_ADMIN = "Administrators.txt";
 const string FILE_EMPLOYEES = "Employees.txt";
 const string DIR_INFO = "Employees_Information";
 const string DEFAULT_PASS = "111111";
 
+// --- Bảng màu ---
 enum Color {
 	BLACK = 0, BLUE = 1, GREEN = 2, CYAN = 3, RED = 4, MAGENTA = 5, BROWN = 6,
     LIGHTGRAY = 7, DARKGRAY = 8, LIGHTBLUE = 9, LIGHTGREEN = 10, LIGHTCYAN = 11,
     LIGHTRED = 12, LIGHTMAGENTA = 13, YELLOW = 14, WHITE = 15
 };
 
+// --- Set màu ---
 void setColor(int color) {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, color);
 }
 
-// Check xem đã tồn tại hay chưa
+// --- Check xem đã tồn tại hay chưa ---
 void ensureDirectoryExists() {
     struct stat info;
     if(stat(DIR_INFO.c_str(), &info) != 0) {
@@ -39,7 +42,7 @@ void ensureDirectoryExists() {
     }
 }
 
-// Hàm chuẩn hóa tên
+// --- Hàm chuẩn hóa tên ---
 string standardizeNames(string strName) {
 	stringstream ss(strName);
 	string strWord, strRes = "";
@@ -56,7 +59,7 @@ string standardizeNames(string strName) {
 	return strRes;
 }
 
-// Xóa khoảng trắng thừa đầu cuối
+// --- Xóa khoảng trắng thừa đầu cuối ---
 string trim(const string& strInput) {
 	size_t iFirst = strInput.find_first_not_of(" \t\r\n");
     if (string::npos == iFirst) return "";
@@ -64,7 +67,7 @@ string trim(const string& strInput) {
     return strInput.substr(iFirst, (iLast - iFirst + 1));
 }
 
-// Hàm kiểm tra số điện thoại
+// --- Hàm kiểm tra số điện thoại ---
 bool isValidPhoneNumber(string strPhone) {
 	if(strPhone.length() != 10) {
 		return false;
@@ -77,20 +80,36 @@ bool isValidPhoneNumber(string strPhone) {
 	return true;
 }
 
-// Hàm kiểm tra Email
+// --- Hàm kiểm tra Email ---
 bool isValidGmail(string strEmail) {
-	string suffix = "@gmail.com";
-	if(strEmail.length() <= suffix.length()) {
+	string strSuffix = "@gmail.com";
+	if(strEmail.length() <= strSuffix.length()) {
 		return false;
 	}
-	size_t pos = strEmail.rfind(suffix);
-	if(pos == string::npos) {
+	string strTail = strEmail.substr(strEmail.length() - strSuffix.length());
+	if(strTail != strSuffix) {
 		return false;
 	}
-	return pos == (strEmail.length() - suffix.length());
+
+	string strUsername = strEmail.substr(0, strEmail.length() - strSuffix.length());
+	if(strUsername.find('@') != string::npos) {
+		return false;
+	}
+	if(strUsername.find("gmail") != string::npos) {
+		return false;
+	}
+	if(strUsername.find(".com") != string::npos) {
+		return false;
+	}
+	for(char c : strUsername) {
+		if(!isalnum(c) && c != '.') {
+			return false;
+		}
+	}
+	return true;
 }
 
-// Chuẩn hóa mật khẩu *
+// --- Chuẩn hóa mật khẩu * ---
 string getHiddenPassword() {
 	string strPassword = "";
 	char cCh;
@@ -112,6 +131,8 @@ string getHiddenPassword() {
 	return strPassword;
 }
 
+
+// --- Template nhập liệu ---
 template<typename T>
 T getInput(string strPrompt) {
 	T tValue;
@@ -131,6 +152,192 @@ T getInput(string strPrompt) {
 		}
 	}
 }
+
+// --- Class danh sách liên kết đơn ---
+template <class T>
+class LinkedList {
+private:
+	class Node {
+	private:
+		T _data;
+		Node* _pNext;
+	public:
+		Node(T val) : _data(val), _pNext(nullptr) {}
+		friend class LinkedList<T>; 
+	};
+	Node* _pHead;
+    Node* _pTail;
+
+public:
+	LinkedList() : _pHead(nullptr), _pTail(nullptr) {}
+
+	~LinkedList() {
+        clear();
+    }
+
+	void clear() {
+		Node* pCurrent = _pHead;
+		while(pCurrent != nullptr) {
+			Node* pNext = pCurrent->_pNext;
+			delete pCurrent;
+			pCurrent = pNext;
+		}
+		_pHead = nullptr;
+		_pTail = nullptr;
+	}
+
+	// --- Thêm cuối ---
+	void pushBack(T value) {
+        Node* pNewNode = new Node(value);
+        if (!_pHead) { 
+            _pHead = pNewNode;
+            _pTail = pNewNode;
+        } else {
+            _pTail->_pNext = pNewNode; 
+            _pTail = pNewNode;
+        }
+    }
+
+	// --- Duyệt ---
+	void forEach(function<void(T)> action) {
+		Node* p = _pHead;
+		while(p) {
+			action(p->_data); 
+            p = p->_pNext;
+		}
+	}
+
+	// --- Tìm ---
+	T find(function<bool(T)> predicate) {
+		Node* p = _pHead;
+		while(p) {
+			if (predicate(p->_data)) { 
+                return p->_data;
+            }
+			p = p->_pNext;
+		}
+		return nullptr;
+	}
+
+	// --- Kiểm tra tồn tại ---
+	bool exists(function<bool(T)> predicate) {
+		Node* p = _pHead;
+		while(p) {
+			if (predicate(p->_data)) { 
+                return true;
+            }
+			p = p->_pNext;
+		}
+		return false;
+	}
+
+	// --- Xóa ---
+	bool removeIf(function<bool(T)> predicate) {
+		if(!_pHead) {
+			return false;
+		}
+
+		// --- Xóa đầu ---
+		if(predicate(_pHead->_data)) {
+			Node* pTemp = _pHead;
+			_pHead = _pHead->_pNext;
+
+			if(_pHead == nullptr) {
+				_pTail = nullptr;
+			}
+			delete pTemp;
+			return true;
+		}
+
+		// --- Còn lại ---
+		Node* pCur = _pHead;
+		Node* pPrev = nullptr;
+		while(pCur) {
+			if(predicate(pCur->_data)) {
+				pPrev->_pNext = pCur->_pNext;
+
+				if(pCur == _pTail) {
+					_pTail = pPrev;
+				}
+				delete pCur;
+				return true;
+			}
+			pPrev = pCur;
+			pCur = pCur->_pNext;
+		}
+		return false;
+	}
+
+	bool isEmpty() const {
+		return _pHead == nullptr;
+	}
+
+	// --- Sắp xếp (đổi chỗ trực tiếp với data) ---
+	void bubbleSort(function<bool(T, T)> compare) {
+		if(!_pHead || !_pHead->_pNext) {
+			return;
+		}
+		bool swapped;
+		Node* ptr1;
+		Node* lptr = nullptr;
+
+		do {
+			swapped = false;
+			ptr1 = _pHead;
+
+			while(ptr1->_pNext != lptr) {
+				if(compare(ptr1->_data, ptr1->_pNext->_data)) {
+					swap(ptr1->_data, ptr1->_pNext->_data);
+                    swapped = true;
+				}
+				ptr1 = ptr1->_pNext;
+			}
+			lptr = ptr1;
+		} while(swapped);
+	}
+};
+
+// --- Class Stack (dùng cho Undo) ---
+template <class T>
+class Stack {
+private:
+	class Node {
+	private:
+		T _data;
+		Node* _pNext;
+	public:
+		Node(T val) : _data(val), _pNext(nullptr) {}
+		friend class Stack<T>;
+	};
+	Node* _pTop;
+
+public:
+	Stack() : _pTop(nullptr) {}
+	~Stack() {
+    	while(!isEmpty()) pop();
+    }
+
+	void push(T val) {
+		Node* newNode = new Node(val);
+		newNode->_pNext = _pTop;
+		_pTop = newNode;
+	}
+
+	T pop() {
+		if(isEmpty()) {
+			return T();
+		}
+		Node* temp = _pTop;
+		T val = temp->_data;
+        _pTop = _pTop->_pNext;
+        delete temp;
+        return val;
+	}
+
+	bool isEmpty() {
+		return _pTop == nullptr;
+	}
+};
 
 class User {
 protected:
@@ -164,6 +371,14 @@ public:
 	Employee(string strUser = "", string strPass = "", string strName = "", string strAddr = "", string strPhone = "", string strEmail = "")
     	: User(strUser, strPass), _strName(strName), _strAddress(strAddr), _strPhonenumber(strPhone), _strEmail(strEmail) {}
 
+	// --- Copy constructor dùng cho Undo ---
+	Employee(const Employee &other) : User(other._strUsername, other._strPassword) {
+        _strName = other._strName;
+        _strAddress = other._strAddress;
+        _strPhonenumber = other._strPhonenumber;
+        _strEmail = other._strEmail;
+    }
+
 	string getName() const { 
 		return _strName; 
 	}
@@ -194,112 +409,14 @@ public:
 		os<<left<<setw(15)<<e._strUsername<<setw(25) << e._strName<<setw(15)<<e._strPhonenumber<<setw(25)<<e._strEmail<<setw(20)<<e._strAddress;
         return os;
 	}
-
-};
-
-template <class T>
-class LinkedList {
-private:
-	struct Node {
-		T data;
-		Node* next;
-		Node(T val) : data(val), next(nullptr) {}
-	};
-	Node* _phead;
-
-public:
-	LinkedList() : _phead(nullptr) {}
-
-	~LinkedList() {
-        clear();
-    }
-
-	void clear() {
-		Node* pCurrent = _phead;
-		while(pCurrent != nullptr) {
-			Node* pNext = pCurrent->next;
-			delete pCurrent;
-			pCurrent = pNext;
-		}
-		_phead = nullptr;
-	}
-
-	void pushBack(T value) {
-		Node* pNewNode = new Node(value);
-		if(!_phead) {
-			_phead = pNewNode;
-		} else {
-			Node* pTemp = _phead;
-			while(pTemp->next) {
-				pTemp = pTemp->next;
-			}
-			pTemp->next = pNewNode;
-		}
-	}
-
-	void forEach(function<void(T)> action) {
-		Node* p = _phead;
-		while(p) {
-			action(p->data);
-			p = p->next;
-		}
-	}
-
-	T find(function<bool(T)> predicate) {
-		Node* p = _phead;
-		while(p) {
-			if(predicate(p->data)) {
-				return p->data;
-			}
-			p = p->next;
-		}
-		return nullptr;
-	}
-
-	bool exists(function<bool(T)> predicate) {
-		Node* p = _phead;
-		while(p) {
-			if(predicate(p->data)) {
-				return true;
-			}
-			p = p->next;
-		}
-		return false;
-	}
-
-	bool removeIf(function<bool(T)> predicate) {
-		if(!_phead) {
-			return false;
-		}
-		if(predicate(_phead->data)) {
-			Node* pTemp = _phead;
-			_phead = _phead->next;
-			delete pTemp;
-			return true;
-		}
-		Node* pCur = _phead;
-		Node* pPrev = nullptr;
-		while(pCur) {
-			if(predicate(pCur->data)) {
-				pPrev->next = pCur->next;
-				delete pCur;
-				return true;
-			}
-			pPrev = pCur;
-			pCur = pCur->next;
-		}
-		return false;
-	}
-
-	bool isEmpty() const {
-		return _phead == nullptr;
-	}
 };
 
 class EmployeeManager {
 private:
 	LinkedList<Employee*> _listEmployees;
+	Stack<Employee*> _undoStack;
 
+	// --- Ghi thông tin ra file [username].txt ---
 	void writeDetailFile(Employee* pEmp) {
 		ensureDirectoryExists();
 		string strFilename = DIR_INFO + "/" + pEmp->getUsername() + ".txt";
@@ -313,6 +430,7 @@ private:
 		}
 	}
 
+	// --- Xóa thông tin trong file [username].txt ---
 	void deleteDetailFile(string strUsername) {
 		string strFilename = DIR_INFO + "/" + strUsername + ".txt";
 		if(remove(strFilename.c_str()) == 0) {
@@ -322,15 +440,43 @@ private:
 		}
 	}
 
+	// --- Đọc thông tin trong file [username].txt ---
+	void readDetailFile(Employee* pEmp) {
+		string strFilename = DIR_INFO + "/" + pEmp->getUsername() + ".txt";
+		ifstream fin(strFilename);
+		if(fin.is_open()) {
+			string line;
+			if(getline(fin, line)) {
+				pEmp->setName(trim(line));
+			}
+			if(getline(fin, line)) {
+				pEmp->setAddress(trim(line));
+			}
+			if(getline(fin, line)) {
+				pEmp->setPhonenumber(trim(line));
+			}
+			if(getline(fin, line)) {
+				pEmp->setEmail(trim(line));
+			}
+			fin.close();
+		}
+	}
+
 public:
 	EmployeeManager() {
         loadFromFile();
     }
 
 	~EmployeeManager() {
+		// --- Giải phóng bộ nhớ LinkedList ---
     	_listEmployees.forEach([](Employee* e) {
         	delete e;
         });
+
+		// --- Giải phóng bộ nhớ Stack ---
+		while(!_undoStack.isEmpty()) {
+            delete _undoStack.pop();
+        }
     }
 
 	void addEmployee(Employee* pEmp) {
@@ -351,7 +497,13 @@ public:
     	});
 	}
 
+
+	// --- Xóa và đẩy vào Stack ---
 	void deleteEmployee(string strUsername) {
+		Employee* target = getEmployeeByUsername(strUsername);
+		Employee* copyEmp = new Employee(*target);
+        _undoStack.push(copyEmp);
+		
 		bool bDeleted = _listEmployees.removeIf([&](Employee* e) {
             if (e->getUsername() == strUsername) {
                 delete e;
@@ -371,6 +523,23 @@ public:
 			cout<<"Khong tin thay username nay"<<endl;
 			setColor(WHITE);
 		}
+	}
+
+	// --- Undo ---
+	void  undoDelete() {
+		if(_undoStack.isEmpty()) {
+			setColor(YELLOW);
+			cout<<"Khong co gi de Undo"<<endl;
+			setColor(WHITE);
+			return;
+		}
+
+		Employee* restoredEmp = _undoStack.pop();
+		_listEmployees.pushBack(restoredEmp);
+		saveToFile();
+		writeDetailFile(restoredEmp);
+		cout<<"Da khoi phuc nhan vien: "<<restoredEmp->getUsername()<<endl;
+		setColor(GREEN);
 	}
 
 	void updateEmployeeInfo() {
@@ -450,6 +619,18 @@ public:
 		setColor(WHITE);
 	}
 
+	// --- Sắp xếp nhân viên ---
+	void sortEmployees() {
+		if(_listEmployees.isEmpty()) {
+			cout<<"Danh sach rong"<<endl;
+			return;
+		}
+		_listEmployees.bubbleSort([](Employee* a, Employee* b) {
+            return a->getName() > b->getName();
+        });
+	}
+
+	// --- Show all ---
 	void showAll() {
 		if(_listEmployees.isEmpty()) {
 			setColor(YELLOW);
@@ -457,6 +638,7 @@ public:
 			setColor(WHITE);
 			return;
 		}
+		sortEmployees();
 		setColor(CYAN);
 		cout<<left<<setw(15)<<"USERNAME"<<setw(25)<<"HO TEN"<<setw(15)<<"SDT"<<setw(25)<<"EMAIL"<<setw(20)<<"DIA CHI"<<endl;
 		cout<<string(100, '-')<<endl;
@@ -486,12 +668,14 @@ public:
 			stringstream ss(strLine);
 			string strSegment;
 			vector<string> vecFields;
+
 			while(getline(ss, strSegment, ',')) {
 				vecFields.push_back(trim(strSegment));
 			}
 
-			if(vecFields.size() == 6) {
-				Employee* pEmp = new Employee(vecFields[0], vecFields[1], vecFields[2], vecFields[3], vecFields[4], vecFields[5]);
+			if(vecFields.size() >= 2) {
+				Employee* pEmp = new Employee(vecFields[0], vecFields[1]);
+				readDetailFile(pEmp);
                 _listEmployees.pushBack(pEmp);
 			}
 		}
@@ -501,7 +685,7 @@ public:
 	void saveToFile() {
 		ofstream fout(FILE_EMPLOYEES);
 		_listEmployees.forEach([&](Employee* e) {
-			fout<<e->getUsername()<< ","<<e->getPassword()<<","<<e->getName()<<","<<e->getAddress()<<","<<e->getPhonenumber()<<","<<e->getEmail()<<endl;
+			fout<<e->getUsername()<< ", "<<e->getPassword()<<endl;
 		});
 		fout.close();
 	}
@@ -590,11 +774,13 @@ private:
 			cout<<"    3. Tim Employee"<<endl;
 			cout<<"    4. Cap nhat Employee"<<endl;
 			cout<<"    5. Hien thi thong Emplyee"<<endl;
-			cout<<"    6. Thoat"<<endl;
+			cout<<"    6. Undo xoa gan nhat"<<endl;
+			cout<<"    7. Thoat"<<endl;
 			setColor(CYAN);
 			cout<<"***********************"<<endl;
 			setColor(WHITE);
-			iChoice = getInput<int>("Nhap lua chon (1-6): ");
+
+			iChoice = getInput<int>("Nhap lua chon (1-7): ");
 
 			switch(iChoice) {
 				case 1: {
@@ -677,7 +863,7 @@ private:
 					Employee* pEmp = _manager.getEmployeeByUsername(trim(strUser));
 					if(pEmp) {
 						setColor(GREEN);
-						cout<<"Tim thay: "<<*pEmp<<endl;
+						cout<<"Tim thay: "<<endl;
 						setColor(CYAN);
 						cout<<left<<setw(15)<<"USERNAME"<<setw(25)<<"HO TEN"<<setw(15)<<"SDT"<<setw(25)<<"EMAIL"<<setw(20)<<"DIA CHI"<<endl;
 						cout << string(100, '-') << endl;
@@ -698,6 +884,9 @@ private:
 					_manager.showAll(); 
                     break;
 				case 6:
+					_manager.undoDelete();
+					break;
+				case 7:
 					setColor(YELLOW);
 					cout<<"Dang xuat Admin..."<<endl;
 					setColor(WHITE);
@@ -707,7 +896,7 @@ private:
 				cout<<"Lua chon khong hop le"<<endl;
 				setColor(WHITE);
 			} 
-		} while(iChoice != 6);
+		} while(iChoice != 7);
 	}
 
 	void changePass(Employee* pEmp, bool bForced) {
