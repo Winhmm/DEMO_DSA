@@ -607,7 +607,7 @@ public:
 				break;
 			} else {
 				setColor(RED);
-				cout<<"Email phải co duoi @gmail.com";
+				cout<<"Email phải co duoi @gmail.com"<<endl;
 				setColor(WHITE);
 			}
 		}
