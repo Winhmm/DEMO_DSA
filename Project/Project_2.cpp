@@ -109,21 +109,21 @@ bool isValidGmail(string strEmail) {
 	return true;
 }
 
-// --- Chuẩn hóa mật khẩu * ---
+// --- Ẩn mật khẩu * ---
 string getHiddenPassword() {
 	string strPassword = "";
-	char cCh;
+	char cHidden;
 	while(true) {
-		cCh = _getch();
-		if(cCh == 13) { // Enter
+		cHidden = _getch();
+		if(cHidden == 13) { // Enter
 			break;
-		} else if(cCh == 8) { // Backspace
+		} else if(cHidden == 8) { // Backspace
 			if(!strPassword.empty()) {
 				cout<<"\b \b";
 				strPassword.pop_back();
 			}
 		} else {
-			strPassword.push_back(cCh);
+			strPassword.push_back(cHidden);
 			cout<<"*";
 		}
 	}
@@ -446,19 +446,17 @@ private:
 		ifstream fin(strFilename);
 		if(fin.is_open()) {
 			string line;
-			if(getline(fin, line)) {
-				pEmp->setName(trim(line));
-			}
-			if(getline(fin, line)) {
-				pEmp->setAddress(trim(line));
-			}
-			if(getline(fin, line)) {
-				pEmp->setPhonenumber(trim(line));
-			}
-			if(getline(fin, line)) {
-				pEmp->setEmail(trim(line));
-			}
-			fin.close();
+			getline(fin, line);
+        	pEmp->setName(trim(line));
+
+        	getline(fin, line);
+        	pEmp->setAddress(trim(line));
+
+        	getline(fin, line);
+        	pEmp->setPhonenumber(trim(line));
+			
+        	getline(fin, line);
+        	pEmp->setEmail(trim(line));
 		}
 	}
 
